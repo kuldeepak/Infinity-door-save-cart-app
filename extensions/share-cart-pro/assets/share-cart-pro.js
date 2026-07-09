@@ -1,19 +1,57 @@
 (function () {
   var CART_PATH_PATTERN = /\/cart\/?$/;
-  var BUTTON_SELECTOR = "[data-share-cart-pro-button]";
-  var SUMMARY_SELECTORS = [
-    "[data-cart-summary]",
-    "[data-cart-totals]",
-    ".cart-summary",
-    ".cart__summary",
-    ".cart__footer",
-    ".cart-footer",
-    ".cart__blocks",
-    ".cart__ctas",
-    ".totals",
-    "#main-cart-footer",
-    "cart-items + div",
+  var BLOCK_SELECTOR = "[data-share-cart-pro-block]";
+  var CHECKOUT_SELECTORS = [
+    'button[name="checkout"]',
+    'input[name="checkout"]',
+    'button[id*="checkout" i]',
+    'input[id*="checkout" i]',
+    'button[class*="checkout" i]',
+    'input[class*="checkout" i]',
+    'a[href*="/checkout"]',
+    '[data-testid*="checkout" i] button',
+    'form[action*="/cart"] [name="checkout"]',
+    'form[action*="/cart"] button[type="submit"]',
+    'form[action*="/cart"] input[type="submit"]'
   ];
+  var CHECKOUT_CONTAINER_SELECTORS = [
+    '.cart__ctas',
+    '.cart__checkout-button',
+    '.cart__footer-buttons',
+    '.cart-buttons',
+    '.cart__submit-controls',
+    '[class*="checkout" i]',
+    'form[action*="/cart"]'
+  ];
+  var SUMMARY_SELECTORS = [
+    '[data-cart-summary]',
+    '[data-cart-totals]',
+    '.cart-summary',
+    '.cart__summary',
+    '.cart__footer',
+    '.cart-footer',
+    '.cart__blocks',
+    '.cart__ctas',
+    '.totals',
+    '#main-cart-footer',
+    'cart-items + div'
+  ];
+
+  function querySelector(selector, root) {
+    try {
+      return (root || document).querySelector(selector);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function querySelectorAll(selector, root) {
+    try {
+      return (root || document).querySelectorAll(selector);
+    } catch (_error) {
+      return [];
+    }
+  }
 
   function getMerchantToken() {
     try {
@@ -31,22 +69,56 @@
     return Boolean(config.canGenerate || getMerchantToken());
   }
 
+  function hasCheckoutText(element) {
+    var text = (element.textContent || element.value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    return text === "checkout" || text === "check out" || text.indexOf("checkout") !== -1 || text.indexOf("check out") !== -1;
+  }
+
+  function isVisible(element) {
+    if (!element) return false;
+    var rect = element.getBoundingClientRect();
+    var styles = window.getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && styles.display !== "none" && styles.visibility !== "hidden";
+  }
+
   function findCheckoutButton() {
-    return document.querySelector('form[action*="/cart"] [name="checkout"], form[action*="/cart"] button[type="submit"], form[action*="/cart"] input[type="submit"], button[name="checkout"], input[name="checkout"]');
+    for (var i = 0; i < CHECKOUT_SELECTORS.length; i += 1) {
+      var selected = querySelector(CHECKOUT_SELECTORS[i]);
+      if (selected && isVisible(selected)) return selected;
+    }
+
+    var candidates = querySelectorAll('button, input[type="submit"], a[href*="/checkout"]');
+    for (var j = 0; j < candidates.length; j += 1) {
+      if (isVisible(candidates[j]) && hasCheckoutText(candidates[j])) return candidates[j];
+    }
+
+    return null;
+  }
+
+  function findCheckoutContainer(checkoutButton) {
+    if (!checkoutButton) return null;
+
+    for (var i = 0; i < CHECKOUT_CONTAINER_SELECTORS.length; i += 1) {
+      var container = checkoutButton.closest(CHECKOUT_CONTAINER_SELECTORS[i]);
+      if (container && isVisible(container)) return container;
+    }
+
+    return checkoutButton;
   }
 
   function findFallbackTarget() {
     for (var i = 0; i < SUMMARY_SELECTORS.length; i += 1) {
-      var target = document.querySelector(SUMMARY_SELECTORS[i]);
-      if (target) return target;
+      var target = querySelector(SUMMARY_SELECTORS[i]);
+      if (target && isVisible(target)) return target;
     }
 
-    return document.querySelector('form[action*="/cart"]') || document.querySelector("main");
+    return querySelector('form[action*="/cart"]') || querySelector("main");
   }
 
   function createButtonBlock() {
     var wrapper = document.createElement("div");
     wrapper.setAttribute("data-share-cart-pro-block", "true");
+    wrapper.setAttribute("data-share-cart-pro-placement", "pending");
     wrapper.style.margin = "12px 0 0";
     wrapper.style.width = "100%";
 
@@ -83,10 +155,10 @@
         if (!cartResponse.ok) throw new Error("Could not read the current cart.");
         var cart = await cartResponse.json();
 
-        var saveResponse = await fetch(config.generateEndpoint || "/apps/saved-cart/generate", {
+        var saveResponse = await fetch(config.generateEndpoint || "/apps/saved-cart/generate/", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ cart: cart, merchantToken: getMerchantToken() }),
+          body: JSON.stringify({ cart: cart, merchantToken: getMerchantToken() })
         });
         var responseText = await saveResponse.text();
         var result = {};
@@ -111,32 +183,52 @@
     return wrapper;
   }
 
-  function mountButton() {
-    if (!CART_PATH_PATTERN.test(window.location.pathname)) return true;
-    if (!canShowButton()) return true;
-    if (document.querySelector(BUTTON_SELECTOR)) return true;
+  function getButtonBlock() {
+    return querySelector(BLOCK_SELECTOR) || createButtonBlock();
+  }
 
-    var block = createButtonBlock();
-    var checkoutButton = findCheckoutButton();
-
-    if (checkoutButton) {
-      checkoutButton.insertAdjacentElement("afterend", block);
-      return true;
-    }
-
-    var target = findFallbackTarget();
+  function placeBlockAfter(target, placement) {
     if (!target || !target.parentNode) return false;
 
-    target.parentNode.insertBefore(block, target);
+    var block = getButtonBlock();
+    if (block.previousElementSibling === target && block.getAttribute("data-share-cart-pro-placement") === placement) return true;
+
+    target.insertAdjacentElement("afterend", block);
+    block.setAttribute("data-share-cart-pro-placement", placement);
     return true;
   }
 
-  function boot() {
-    if (mountButton()) return;
+  function placeAfterCheckout() {
+    var checkoutButton = findCheckoutButton();
+    var checkoutContainer = findCheckoutContainer(checkoutButton);
+    return placeBlockAfter(checkoutContainer, "checkout");
+  }
 
+  function placeFallback() {
+    var target = findFallbackTarget();
+    return placeBlockAfter(target, "fallback");
+  }
+
+  function mountButton(options) {
+    var useFallback = options && options.useFallback;
+    if (!CART_PATH_PATTERN.test(window.location.pathname)) return "done";
+    if (!canShowButton()) return "wait";
+    if (placeAfterCheckout()) return "checkout";
+    if (useFallback && placeFallback()) return "fallback";
+    return "wait";
+  }
+
+  function boot() {
     var startedAt = Date.now();
+    var result = mountButton({ useFallback: false });
+    if (result === "checkout") return;
+
     var observer = new MutationObserver(function () {
-      if (mountButton() || Date.now() - startedAt > 10000) {
+      var elapsed = Date.now() - startedAt;
+      var shouldFallback = elapsed > 10000;
+      var placement = mountButton({ useFallback: shouldFallback });
+
+      if (placement === "checkout" || elapsed > 15000) {
         observer.disconnect();
       }
     });
@@ -150,5 +242,4 @@
     boot();
   }
 })();
-
 

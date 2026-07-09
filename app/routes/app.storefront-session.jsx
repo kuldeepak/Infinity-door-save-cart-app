@@ -16,7 +16,7 @@ export const action = async ({ request }) => {
   });
 
   return json({
-    storefrontUrl: `https://${session.shop}/apps/saved-cart/merchant/${merchantSession.token}`,
+    storefrontUrl: `https://${session.shop}/apps/saved-cart/merchant/${merchantSession.token}/`,
     expiresAt: merchantSession.expiresAt,
   });
 };

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "0238a48cd393fcafba07813fbf195527"
-application_url = "http://cartsave.infinitydoors.net"
+application_url = "https://savecart.kaswebtechsolutions.com"
 embedded = true
 name = "SaveCart"
 
@@ -45,14 +45,13 @@ api_version = "2026-10"
   topics = [ "app/scopes_update" ]
 
 [auth]
-redirect_urls = [ "http://cartsave.infinitydoors.net/api/auth" ]
+redirect_urls = [ "https://savecart.kaswebtechsolutions.com/api/auth" ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [app_proxy]
-url = "http://cartsave.infinitydoors.net/apps"
+url = "https://savecart.kaswebtechsolutions.com/apps"
 subpath = "saved-cart"
 prefix = "apps"
 
