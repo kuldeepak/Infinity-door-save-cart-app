@@ -1,0 +1,5 @@
+name = "ShareCart storefront"
+type = "theme_app_extension"
+uid = "8f044a3d-f56e-87ad-bf17-fb92d3ca911a3267b664"
+
+[settings]
