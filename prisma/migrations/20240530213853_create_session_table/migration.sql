@@ -15,7 +15,7 @@ CREATE TABLE `Session` (
     `collaborator` BOOLEAN NULL DEFAULT false,
     `emailVerified` BOOLEAN NULL DEFAULT false,
     `refreshToken` TEXT NULL,
-    `refreshTokenExpires` DATETIME(3) NULL,
+    `refreshTokenExpires` TIMESTAMP(3) NULL,
 
     PRIMARY KEY (`id`)
 );
