@@ -42,7 +42,7 @@ model SavedCart {
   region           String?         @db.VarChar(255)
   subtotal         Int             @default(0)
   total            Int             @default(0)
-  cartJson         String          @db.LongText
+  cartJson         String          @db.VarChar(255)
   recoveredOrderId String?         @db.VarChar(255)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -62,7 +62,7 @@ model SavedCartItem {
   sku            String?   @db.VarChar(255)
   quantity       Int
   price          Int
-  propertiesJson String?   @db.LongText
+  propertiesJson String?   @db.VarChar(255)
   imageUrl       String?   @db.Text
   savedCart      SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
 
